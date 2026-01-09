@@ -45,6 +45,11 @@
 #include <cstdint>
 #include <cstddef>
 
+// Используем единый интерфейс IBlockDevice из ports
+#ifdef USB_MSC_ENABLED
+#include "ports/IBlockDevice.hpp"
+#endif
+
 // Проверка что хотя бы один модуль включён
 #if !defined(USB_CDC_ENABLED) && !defined(USB_MSC_ENABLED)
 #warning "USB Composite: ни CDC, ни MSC не включены. Определите USB_CDC_ENABLED и/или USB_MSC_ENABLED"
@@ -71,33 +76,10 @@ struct GpioPin {
     uint16_t pin;        ///< Номер пина (0-15)
 };
 
-/// Интерфейс блочного устройства для MSC
-struct IBlockDevice {
-    virtual ~IBlockDevice() = default;
-    
-    /// Проверка готовности
-    virtual bool IsReady() const = 0;
-    
-    /// Получить количество блоков
-    virtual uint32_t GetBlockCount() const = 0;
-    
-    /// Получить размер блока (обычно 512)
-    virtual uint32_t GetBlockSize() const = 0;
-    
-    /// Чтение блоков
-    /// @param lba Логический адрес блока
-    /// @param buffer Буфер для данных
-    /// @param count Количество блоков
-    /// @return true если успешно
-    virtual bool Read(uint32_t lba, uint8_t* buffer, uint32_t count) = 0;
-    
-    /// Запись блоков
-    /// @param lba Логический адрес блока
-    /// @param buffer Данные для записи
-    /// @param count Количество блоков
-    /// @return true если успешно
-    virtual bool Write(uint32_t lba, const uint8_t* buffer, uint32_t count) = 0;
-};
+#ifdef USB_MSC_ENABLED
+/// Алиас для совместимости: используем единый IBlockDevice из ports
+using IBlockDevice = ports::IBlockDevice;
+#endif
 
 /// Диагностика USB инициализации
 struct UsbDiagnostics {

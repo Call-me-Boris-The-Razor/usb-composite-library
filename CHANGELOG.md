@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-01-10
+
+### Fixed
+- **Windows Explorer crash** — исправлен краш Explorer при подключении USB MSC с неготовой SD картой
+- **SCSI sense codes** — добавлена корректная установка SCSI sense при `block_count=0`
+- **Порядок инициализации** — USB MSC теперь запускается только после готовности SD карты
+
+### Changed
+- **Единый IBlockDevice** — убрано дублирование, используется `ports::IBlockDevice`
+- **Include paths** — добавлены пути к `libs/ports/include` и `libs/domain/include`
+
+### Improved
+- **Примеры** — `main_msc.cpp` теперь показывает правильный порядок инициализации с ожиданием готовности SD
+
+---
+
 ## [3.0.0] - 2026-01-10
 
 ### Breaking Changes

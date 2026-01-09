@@ -6,7 +6,7 @@
 
 ### Plug-and-Play USB для STM32H7
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg?style=for-the-badge)](https://github.com/Call-me-Boris-The-Razor/usb-composite-library)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg?style=for-the-badge)](https://github.com/Call-me-Boris-The-Razor/usb-composite-library)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/STM32-H7-orange.svg?style=for-the-badge&logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32h7-series.html)
 [![TinyUSB](https://img.shields.io/badge/TinyUSB-0.16+-yellow.svg?style=for-the-badge)](https://github.com/hathach/tinyusb)
@@ -55,7 +55,7 @@ build_flags =
 ```
 
 ```cpp
-// main.cpp — CDC + MSC + SD карта (минимальный код!)
+// main.cpp — CDC + MSC + SD карта
 #include "usb_composite.h"
 #include "usb_sdmmc.h"
 
@@ -65,15 +65,25 @@ usb::SdmmcBlockDevice g_sd;
 int main() {
     HAL_Init();  // ← Только это! Библиотека сама настроит PLL и clocks!
     
-    // SD карта
+    // SD карта — ВАЖНО: дождаться готовности перед USB!
     usb::SdmmcConfig sd_cfg;
-    sd_cfg.instance = SDMMC1;
     sd_cfg.use_4bit_mode = true;
-    g_sd.Init(sd_cfg);
     
-    // USB
+    if (!g_sd.Init(sd_cfg)) {
+        while (1) { HAL_Delay(500); }  // Ошибка SD
+    }
+    
+    // Ждём готовности SD (до 3 сек)
+    uint32_t start = HAL_GetTick();
+    while (!g_sd.IsReady() && (HAL_GetTick() - start) < 3000) {
+        HAL_Delay(10);
+    }
+    
+    // USB — запускаем ТОЛЬКО после готовности SD!
     g_usb.Init();
-    g_usb.MscAttach(&g_sd);
+    if (g_sd.IsReady()) {
+        g_usb.MscAttach(&g_sd);
+    }
     g_usb.Start();
     
     while (1) {
@@ -82,7 +92,7 @@ int main() {
 }
 ```
 
-**Всё.** Без `SystemClock_Config()`. Библиотека делает всё сама! 🎉
+**Важно:** USB MSC запускается только после готовности SD карты! 🎉
 
 ---
 

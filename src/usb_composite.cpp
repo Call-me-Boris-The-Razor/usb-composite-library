@@ -574,17 +574,23 @@ bool tud_msc_test_unit_ready_cb(uint8_t lun) {
 }
 
 void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_size) {
-    (void)lun;
-    
 #ifdef USB_MSC_ENABLED
     if (usb::g_msc_device != nullptr && usb::g_msc_device->IsReady()) {
         *block_count = usb::g_msc_device->GetBlockCount();
         *block_size = static_cast<uint16_t>(usb::g_msc_device->GetBlockSize());
+        
+        // Дополнительная проверка: если block_count == 0, это ошибка
+        if (*block_count == 0) {
+            tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3A, 0x00);
+        }
     } else {
+        // Устройство не готово - устанавливаем sense для корректной обработки Windows
         *block_count = 0;
         *block_size = 512;
+        tud_msc_set_sense(lun, SCSI_SENSE_NOT_READY, 0x3A, 0x00);
     }
 #else
+    (void)lun;
     *block_count = 0;
     *block_size = 512;
 #endif
