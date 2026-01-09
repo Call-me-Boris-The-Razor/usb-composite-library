@@ -1,0 +1,33 @@
+{
+    "name": "usb_composite",
+    "version": "2.0.0",
+    "description": "Plug-and-play USB Composite Device (CDC + MSC) для STM32H7. Virtual COM Port и Mass Storage на базе TinyUSB.",
+    "keywords": "usb, cdc, msc, tinyusb, stm32h7, stm32, composite, virtual-com-port, mass-storage",
+    "authors": [
+        {
+            "name": "OkoDev"
+        }
+    ],
+    "license": "MIT",
+    "frameworks": "stm32cube",
+    "platforms": "ststm32",
+    "dependencies": {
+        "hathach/tinyusb": "^0.16.0"
+    },
+    "build": {
+        "flags": [
+            "-I include"
+        ],
+        "srcFilter": [
+            "+<src/*.cpp>",
+            "+<src/*.c>"
+        ],
+        "extraScript": ""
+    },
+    "export": {
+        "include": [
+            "include/*",
+            "linker/*"
+        ]
+    }
+}
