@@ -12,7 +12,7 @@
     "frameworks": "stm32cube",
     "platforms": "ststm32",
     "dependencies": {
-        "tinyusb": "https://github.com/hathach/tinyusb.git#0.15.0"
+        "tinyusb": "https://github.com/hathach/tinyusb/archive/refs/tags/0.15.0.zip"
     },
     "build": {
         "flags": [
