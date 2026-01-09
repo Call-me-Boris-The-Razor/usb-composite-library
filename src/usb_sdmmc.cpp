@@ -61,10 +61,21 @@ bool SdmmcBlockDevice::Init(const SdmmcConfig& config) {
     s_cache_dirty = false;
     phys_block_size_ = 1024;  // По умолчанию для SD NAND
     
-    // 1. Настраиваем источник тактирования SDMMC (PLL1Q)
+    // 1. Настраиваем источник тактирования SDMMC от PLL2R
+    // PLL2 настраиваем сами - гарантированно работает
     RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
     PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_SDMMC;
-    PeriphClkInit.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL;
+    
+    // Настраиваем PLL2 для SDMMC (200 MHz -> делитель в SDMMC)
+    PeriphClkInit.PLL2.PLL2M = 4;    // HSI = 64 MHz / 4 = 16 MHz
+    PeriphClkInit.PLL2.PLL2N = 50;   // 16 * 50 = 800 MHz VCO
+    PeriphClkInit.PLL2.PLL2P = 2;
+    PeriphClkInit.PLL2.PLL2Q = 2;
+    PeriphClkInit.PLL2.PLL2R = 4;    // 800 / 4 = 200 MHz
+    PeriphClkInit.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_3;
+    PeriphClkInit.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
+    PeriphClkInit.PLL2.PLL2FRACN = 0;
+    PeriphClkInit.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL2;
     HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
     
     // 2. Включаем тактирование SDMMC
