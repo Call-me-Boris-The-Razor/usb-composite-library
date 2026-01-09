@@ -1,6 +1,6 @@
 # API Reference
 
-**Версия 2.4.0**
+**Версия 3.0.0**
 
 Полная документация по API USB Composite Library.
 

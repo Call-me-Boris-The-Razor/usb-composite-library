@@ -18,7 +18,7 @@ int main(void) {
     
     // SD карта — библиотека сама настроит PLL!
     usb::SdmmcConfig sd_cfg;
-    sd_cfg.instance = SDMMC1;
+    sd_cfg.sdmmc_index = 1;  // SDMMC1
     sd_cfg.use_4bit_mode = true;
     
     g_sd.Init(sd_cfg);
