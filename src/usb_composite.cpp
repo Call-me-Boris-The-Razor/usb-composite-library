@@ -320,6 +320,23 @@ void InitUsbGpio() {
 __attribute__((weak))
 void InitUsbClock() {
 #if defined(STM32H7) || defined(STM32H743xx) || defined(STM32H750xx)
+    // Включаем HSI48 для USB (если ещё не включён)
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48;
+    RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+    HAL_RCC_OscConfig(&RCC_OscInitStruct);
+    
+    // USB Clock от HSI48
+    RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+    PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
+    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
+    
+    // Включаем USB Voltage Detector
+    HAL_PWREx_EnableUSBVoltageDetector();
+    
+    // Включаем тактирование USB OTG FS
     __HAL_RCC_USB2_OTG_FS_CLK_ENABLE();
     
     __HAL_RCC_USB2_OTG_FS_FORCE_RESET();
@@ -355,6 +372,12 @@ void InitUsbNvic() {
     HAL_NVIC_SetPriority(OTG_FS_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
 #endif
+}
+
+// SysTick Handler (weak — можно переопределить в проекте)
+__attribute__((weak))
+void SysTick_Handler(void) {
+    HAL_IncTick();
 }
 
 } // extern "C" for Init functions

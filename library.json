@@ -1,6 +1,6 @@
 {
     "name": "usb_composite",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "description": "Plug-and-play USB Composite Device (CDC + MSC + SDMMC) для STM32H7. Virtual COM Port, Mass Storage и встроенная поддержка SD карт на базе TinyUSB.",
     "keywords": "usb, cdc, msc, sdmmc, sd-card, tinyusb, stm32h7, stm32, composite, virtual-com-port, mass-storage",
     "authors": [

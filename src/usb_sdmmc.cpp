@@ -61,7 +61,13 @@ bool SdmmcBlockDevice::Init(const SdmmcConfig& config) {
     s_cache_dirty = false;
     phys_block_size_ = 1024;  // По умолчанию для SD NAND
     
-    // 1. Включаем тактирование
+    // 1. Настраиваем источник тактирования SDMMC (PLL1Q)
+    RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_SDMMC;
+    PeriphClkInit.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL;
+    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
+    
+    // 2. Включаем тактирование SDMMC
     if (config_.instance == SDMMC1) {
         __HAL_RCC_SDMMC1_CLK_ENABLE();
         __HAL_RCC_SDMMC1_FORCE_RESET();
