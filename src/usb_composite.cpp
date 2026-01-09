@@ -95,12 +95,28 @@ bool UsbDevice::Init(const Config& config) {
     InitUsbNvic();
     
     // Инициализация TinyUSB
-    if (!tusb_init()) {
+    bool tusb_ok = tusb_init();
+    diagnostics_.tusb_init_ok = tusb_ok;
+    
+    if (!tusb_ok) {
         return false;
     }
     
     // Повторно применяем VBUS override (tusb_init делает сброс)
     InitUsbOtg();
+    
+    // Сохраняем диагностику USB регистров
+#if defined(STM32H7) || defined(STM32H743xx) || defined(STM32H750xx)
+    #ifdef USB2_OTG_FS_PERIPH_BASE
+    diagnostics_.usb_base_addr = USB2_OTG_FS_PERIPH_BASE;
+    auto* USBx = reinterpret_cast<USB_OTG_GlobalTypeDef*>(USB2_OTG_FS_PERIPH_BASE);
+    #else
+    diagnostics_.usb_base_addr = 0x40080000UL;
+    auto* USBx = reinterpret_cast<USB_OTG_GlobalTypeDef*>(0x40080000UL);
+    #endif
+    diagnostics_.gccfg = USBx->GCCFG;
+    diagnostics_.gotgctl = USBx->GOTGCTL;
+#endif
     
     initialized_ = true;
     return true;
@@ -145,6 +161,10 @@ State UsbDevice::GetState() const {
         return State::Connected;
     }
     return State::Disconnected;
+}
+
+UsbDiagnostics UsbDevice::GetDiagnostics() const {
+    return diagnostics_;
 }
 
 void UsbDevice::ToggleDpPin() {
@@ -272,11 +292,13 @@ void UsbDevice::MscEject() {
 
 #endif // USB_MSC_ENABLED
 
+}  // namespace usb
+
 //--------------------------------------------------------------------+
-// Приватные методы инициализации (платформозависимые)
+// Платформозависимые функции инициализации (extern "C", weak)
 //--------------------------------------------------------------------+
 
-// Слабые функции — могут быть переопределены в проекте
+extern "C" {
 
 __attribute__((weak))
 void InitUsbGpio() {
@@ -310,9 +332,9 @@ __attribute__((weak))
 void InitUsbOtg() {
 #if defined(STM32H7) || defined(STM32H743xx) || defined(STM32H750xx)
     #ifdef USB2_OTG_FS_PERIPH_BASE
-    auto* USBx = reinterpret_cast<USB_OTG_GlobalTypeDef*>(USB2_OTG_FS_PERIPH_BASE);
+    USB_OTG_GlobalTypeDef* USBx = (USB_OTG_GlobalTypeDef*)(USB2_OTG_FS_PERIPH_BASE);
     #else
-    auto* USBx = reinterpret_cast<USB_OTG_GlobalTypeDef*>(0x40080000UL);
+    USB_OTG_GlobalTypeDef* USBx = (USB_OTG_GlobalTypeDef*)(0x40080000UL);
     #endif
     
     // Disable VBUS sensing
@@ -335,7 +357,58 @@ void InitUsbNvic() {
 #endif
 }
 
-}  // namespace usb
+} // extern "C" for Init functions
+
+//--------------------------------------------------------------------+
+// DFU Bootloader Jump (встроенная реализация)
+//--------------------------------------------------------------------+
+
+#if defined(STM32H7) || defined(STM32H743xx) || defined(STM32H750xx)
+
+// Адрес системного bootloader для STM32H7
+#define STM32H7_SYSTEM_MEMORY_ADDR  0x1FF09800UL
+
+// Magic value для backup register (опционально, для reset-safe jump)
+#define DFU_BOOTLOADER_MAGIC        0xDEADBEEF
+
+static void JumpToBootloader(void) {
+    // Отключаем все прерывания
+    __disable_irq();
+    
+    // Отключаем SysTick
+    SysTick->CTRL = 0;
+    SysTick->LOAD = 0;
+    SysTick->VAL = 0;
+    
+    // Сбрасываем все прерывания
+    for (uint32_t i = 0; i < 8; i++) {
+        NVIC->ICER[i] = 0xFFFFFFFF;
+        NVIC->ICPR[i] = 0xFFFFFFFF;
+    }
+    
+    // Отключаем USB
+    #ifdef USB2_OTG_FS_PERIPH_BASE
+    USB_OTG_GlobalTypeDef* USBx = (USB_OTG_GlobalTypeDef*)(USB2_OTG_FS_PERIPH_BASE);
+    USBx->GCCFG = 0;
+    __HAL_RCC_USB2_OTG_FS_CLK_DISABLE();
+    #endif
+    
+    // Включаем прерывания для bootloader
+    __enable_irq();
+    
+    // Устанавливаем MSP на значение из System Memory
+    __set_MSP(*((volatile uint32_t*)STM32H7_SYSTEM_MEMORY_ADDR));
+    
+    // Переходим в bootloader
+    typedef void (*BootloaderFunc)(void);
+    BootloaderFunc bootloader = (BootloaderFunc)(*(volatile uint32_t*)(STM32H7_SYSTEM_MEMORY_ADDR + 4));
+    bootloader();
+    
+    // Никогда не дойдём сюда
+    while(1) {}
+}
+
+#endif // STM32H7
 
 //--------------------------------------------------------------------+
 // TinyUSB Callbacks (extern "C")
@@ -343,8 +416,7 @@ void InitUsbNvic() {
 
 extern "C" {
 
-// Время в миллисекундах для TinyUSB (weak — можно переопределить в проекте)
-__attribute__((weak))
+// Время в миллисекундах для TinyUSB
 uint32_t board_millis(void) {
 #if defined(STM32H7) || defined(STM32H743xx) || defined(STM32H750xx) || \
     defined(STM32F4) || defined(STM32F7)
@@ -354,20 +426,20 @@ uint32_t board_millis(void) {
 #endif
 }
 
-// USB IRQ Handlers (weak — можно переопределить в проекте)
+// USB IRQ Handlers — без weak чтобы гарантировать работу из коробки
+// Если нужно переопределить — закомментируйте USB_COMPOSITE_OWN_IRQ_HANDLERS
 #if defined(STM32H7) || defined(STM32H743xx) || defined(STM32H750xx)
+#ifndef USB_COMPOSITE_OWN_IRQ_HANDLERS
 
-__attribute__((weak))
 void OTG_FS_IRQHandler(void) {
-    tusb_int_handler(0, true);
+    tud_int_handler(0);
 }
 
-// Fallback для плат где OTG_FS_IRQn указывает на HS (некоторые версии HAL)
-__attribute__((weak))
 void OTG_HS_IRQHandler(void) {
-    tusb_int_handler(0, true);
+    tud_int_handler(0);
 }
 
+#endif // USB_COMPOSITE_OWN_IRQ_HANDLERS
 #endif
 
 //--------------------------------------------------------------------+
@@ -401,9 +473,14 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
     
     // 1200 bps = Magic baud rate для DFU
     if (baudrate == usb::kDfuBaudrate) {
-        // Вызываем DFU callback если установлен
+        // Вызываем DFU callback если установлен, иначе встроенный jump
         if (usb::g_dfu_callback != nullptr) {
             usb::g_dfu_callback(usb::g_dfu_context);
+        } else {
+            // Встроенный переход в DFU bootloader
+            #if defined(STM32H7) || defined(STM32H743xx) || defined(STM32H750xx)
+            JumpToBootloader();
+            #endif
         }
     } else {
         // Любой другой baudrate = терминал открылся

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-01-10
+
+### Added
+- **Auto DFU Jump** — автоматический переход в системный bootloader при 1200 bps (без callback)
+- **USB Diagnostics** — `GetDiagnostics()` для отладки инициализации USB
+- **Test Examples** — тестовые примеры в `examples/basic_test/`
+
+### Changed
+- **No Linker Script Required** — Slave Mode без DMA, буферы в любой RAM
+- **No Weak IRQ Handlers** — `OTG_FS_IRQHandler` и `OTG_HS_IRQHandler` гарантированно работают
+- **TinyUSB 0.16.0** — обновлён API (`tud_int_handler` вместо `tusb_int_handler`)
+- **extern "C" Init Functions** — корректная C linkage для weak функций
+
+### Fixed
+- Исправлена линковка weak функций инициализации
+- Исправлен вызов IRQ handler для TinyUSB 0.16+
+
+---
+
 ## [2.1.0] - 2025-01-09
 
 ### Added

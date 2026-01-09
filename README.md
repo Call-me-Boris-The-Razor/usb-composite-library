@@ -6,7 +6,7 @@
 
 ### Plug-and-Play USB для STM32H7
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg?style=for-the-badge)](https://github.com/Call-me-Boris-The-Razor/usb-composite-library)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg?style=for-the-badge)](https://github.com/Call-me-Boris-The-Razor/usb-composite-library)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/STM32-H7-orange.svg?style=for-the-badge&logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32h7-series.html)
 [![TinyUSB](https://img.shields.io/badge/TinyUSB-0.16+-yellow.svg?style=for-the-badge)](https://github.com/hathach/tinyusb)
@@ -308,16 +308,7 @@ build_flags =
 
 ### Linker Script
 
-Для STM32H7 добавьте секцию `.dma_buffer` в RAM_D2:
-
-```ld
-.dma_buffer (NOLOAD) :
-{
-    . = ALIGN(32);
-    *(.dma_buffer)
-    . = ALIGN(32);
-} >RAM_D2
-```
+**Не требуется!** Библиотека использует Slave Mode (polling) без DMA, поэтому буферы могут быть в любой RAM.
 
 ---
 
@@ -562,14 +553,25 @@ g_usb.MscAttach(&g_sd_adapter);
 
 ## 🔧 Платформозависимые функции
 
-Библиотека содержит weak-функции инициализации для STM32H7:
+Библиотека работает "из коробки" для STM32H7:
+
+- **IRQ Handlers** — `OTG_FS_IRQHandler` и `OTG_HS_IRQHandler` уже реализованы
+- **board_millis()** — использует `HAL_GetTick()`
+- **VBUS sensing** — автоматически отключается
+- **Linker script** — не требуется (используется Slave Mode)
+
+Если нужно переопределить IRQ handlers — добавьте флаг:
+
+```ini
+build_flags = -D USB_COMPOSITE_OWN_IRQ_HANDLERS
+```
+
+Slot-функции инициализации (weak, можно переопределить):
 
 - `InitUsbGpio()` — инициализация GPIO PA11/PA12
 - `InitUsbClock()` — включение тактирования USB
 - `InitUsbOtg()` — настройка USB OTG регистров
 - `InitUsbNvic()` — настройка прерываний
-
-Для других платформ переопределите эти функции в своём проекте.
 
 ---
 
@@ -589,10 +591,22 @@ g_usb.Start();  // Здесь выполнится toggle
 
 ## ❓ Troubleshooting
 
+### Диагностика USB
+
+Библиотека предоставляет диагностику инициализации:
+
+```cpp
+auto diag = g_usb.GetDiagnostics();
+printf("tusb_init: %s\n", diag.tusb_init_ok ? "OK" : "FAIL");
+printf("USB base: 0x%08lX\n", diag.usb_base_addr);
+printf("GCCFG: 0x%08lX\n", diag.gccfg);
+printf("GOTGCTL: 0x%08lX\n", diag.gotgctl);
+```
+
 ### USB не определяется
 
-1. Проверьте тактирование USB (HSI48 или PLL)
-2. Убедитесь что VBUS sensing отключён (или настроен)
+1. Проверьте диагностику (`GetDiagnostics()`)
+2. Проверьте тактирование USB (HSI48 или PLL)
 3. Попробуйте toggle D+ пина
 
 ### CDC не работает

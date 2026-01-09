@@ -25,17 +25,17 @@ static constexpr uint32_t kMaxPhysBlockSize = 2048;
 /// Размер логического сектора (512 байт, для USB MSC)
 static constexpr uint32_t kLogBlockSize = SdmmcBlockDevice::kBlockSize;
 
-// ============ DMA Буферы (в RAM_D2, non-cacheable) ============
+// ============ Буферы для Sector Translation Layer ============
+// 
+// Используем HAL_SD_ReadBlocks/WriteBlocks в polling mode (не DMA),
+// поэтому буферы могут быть в любой RAM — не требуется linker script!
+//
 
-/// Физический буфер для DMA операций
-/// Размещён в RAM_D2 (0x30000000) — non-cacheable по MPU
-static uint8_t s_phys_buffer[kMaxPhysBlockSize] 
-    __attribute__((section(".dma_buffer"), aligned(32)));
+/// Физический буфер для операций чтения/записи
+static uint8_t s_phys_buffer[kMaxPhysBlockSize] __attribute__((aligned(4)));
 
-/// Кэш последнего прочитанного физического блока
-/// Используется для оптимизации последовательного чтения и RMW
-static uint8_t s_cache_buffer[kMaxPhysBlockSize] 
-    __attribute__((section(".dma_buffer"), aligned(32)));
+/// Кэш последнего прочитанного физического блока (для оптимизации RMW)
+static uint8_t s_cache_buffer[kMaxPhysBlockSize] __attribute__((aligned(4)));
 
 /// LBA последнего закэшированного физического блока (UINT32_MAX = невалидный)
 static uint32_t s_cached_phys_lba = UINT32_MAX;

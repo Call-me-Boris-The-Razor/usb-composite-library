@@ -85,24 +85,23 @@ extern "C" {
 // Memory Configuration
 //--------------------------------------------------------------------+
 
-// STM32H7: буферы USB должны быть в Non-Cacheable памяти или cache-maintained
-// Используйте секцию .dma_buffer в Linker Script
-#ifndef CFG_TUSB_MEM_SECTION
-#define CFG_TUSB_MEM_SECTION  __attribute__((section(".dma_buffer")))
-#endif
+// STM32H7: используем Slave Mode (без DMA) — не требует специальной памяти!
+// Это позволяет работать без модификации linker script.
+// Буферы могут быть в любой RAM, т.к. USB контроллер работает через CPU.
 
 #ifndef CFG_TUSB_MEM_ALIGN
-#define CFG_TUSB_MEM_ALIGN    __attribute__((aligned(32)))
+#define CFG_TUSB_MEM_ALIGN    __attribute__((aligned(4)))
 #endif
 
-// DWC2: slave mode (без DMA)
-#ifndef CFG_TUD_DWC2_DMA_ENABLE
+// Не используем специальную секцию — slave mode не требует DMA-памяти
+#ifndef CFG_TUSB_MEM_SECTION
+#define CFG_TUSB_MEM_SECTION
+#endif
+
+// DWC2: ОБЯЗАТЕЛЬНО slave mode (без DMA) для работы без linker script
+// Slave mode работает медленнее, но не требует буферов в RAM_D2
 #define CFG_TUD_DWC2_DMA_ENABLE   0
-#endif
-
-#ifndef CFG_TUD_DWC2_SLAVE_ENABLE
 #define CFG_TUD_DWC2_SLAVE_ENABLE 1
-#endif
 
 //--------------------------------------------------------------------+
 // Endpoint Configuration

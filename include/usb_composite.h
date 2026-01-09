@@ -99,6 +99,14 @@ struct IBlockDevice {
     virtual bool Write(uint32_t lba, const uint8_t* buffer, uint32_t count) = 0;
 };
 
+/// Диагностика USB инициализации
+struct UsbDiagnostics {
+    bool tusb_init_ok = false;     ///< Результат tusb_init()
+    uint32_t usb_base_addr = 0;    ///< Базовый адрес USB OTG
+    uint32_t gccfg = 0;            ///< Регистр GCCFG после инициализации
+    uint32_t gotgctl = 0;          ///< Регистр GOTGCTL после инициализации
+};
+
 /// Конфигурация USB устройства
 struct Config {
     /// Пин D+ для ручного переподключения (опционально)
@@ -195,6 +203,9 @@ public:
     /// Получить текущее состояние
     State GetState() const;
     
+    /// Получить диагностику инициализации (для отладки)
+    UsbDiagnostics GetDiagnostics() const;
+    
     //----------------------------------------------------------------+
     // CDC методы (только если USB_CDC_ENABLED)
     //----------------------------------------------------------------+
@@ -270,6 +281,7 @@ public:
 private:
     bool initialized_ = false;
     Config config_{};
+    UsbDiagnostics diagnostics_{};
     
 #ifdef USB_MSC_ENABLED
     IBlockDevice* msc_device_ = nullptr;
