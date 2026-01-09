@@ -429,9 +429,20 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8],
                         uint8_t product_id[16], uint8_t product_rev[4]) {
     (void)lun;
     
-    const char vid[] = "USB";
-    const char pid[] = "Composite MSC";
-    const char rev[] = "1.0";
+    // SCSI строки (можно переопределить через build_flags)
+#ifndef USB_MSC_VENDOR
+#define USB_MSC_VENDOR "USB"
+#endif
+#ifndef USB_MSC_PRODUCT
+#define USB_MSC_PRODUCT "Mass Storage"
+#endif
+#ifndef USB_MSC_REVISION
+#define USB_MSC_REVISION "1.0"
+#endif
+    
+    const char vid[] = USB_MSC_VENDOR;
+    const char pid[] = USB_MSC_PRODUCT;
+    const char rev[] = USB_MSC_REVISION;
     
     memset(vendor_id, ' ', 8);
     memset(product_id, ' ', 16);

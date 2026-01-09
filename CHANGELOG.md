@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-01-09
+
+### Added
+- **SDMMC Driver** — встроенный драйвер SD карт (`SdmmcBlockDevice`)
+- **Board Presets** — готовые конфигурации для плат (`OkoRelay()`, `DevEBoxH743()`, `WeActH743()`)
+- **MSC SCSI Strings** — кастомизация SCSI Vendor/Product через флаги `USB_MSC_VENDOR`, `USB_MSC_PRODUCT`
+- **Sector Translation Layer** — поддержка SD NAND с 1024-байт физическими секторами
+
+### Changed
+- Реструктуризация проекта — плоская структура вместо вложенной `lib/`
+- Улучшенная документация с примерами
+
+---
+
 ## [2.0.0] - 2024-01-09
 
 ### Added
