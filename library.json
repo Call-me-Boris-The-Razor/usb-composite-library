@@ -11,9 +11,7 @@
     "license": "MIT",
     "frameworks": "stm32cube",
     "platforms": "ststm32",
-    "dependencies": {
-        "hathach/tinyusb": "^0.16.0"
-    },
+    "dependencies": {},
     "build": {
         "flags": [
             "-I include"
