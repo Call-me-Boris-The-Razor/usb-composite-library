@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-01-10
+
+### Added
+- **Auto PLL Config** — библиотека автоматически настроит PLL если он не настроен
+- **HSE Auto-Detection** — определяет HSE_VALUE (25/8 MHz) или fallback на HSI
+- **Full SystemClock Built-in** — для MSC не нужен SystemClock_Config от пользователя
+- **Auto DFU Script** — `extra_script.py` для автоматического 1200 bps touch
+
+### Changed
+- **Truly Out of Box** — пользователю достаточно `HAL_Init()` даже для MSC
+- **Composite Example** — минимальный CDC + MSC без SystemClock_Config
+
+---
+
 ## [2.3.0] - 2026-01-10
 
 ### Added

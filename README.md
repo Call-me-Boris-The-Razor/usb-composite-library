@@ -6,7 +6,7 @@
 
 ### Plug-and-Play USB для STM32H7
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg?style=for-the-badge)](https://github.com/Call-me-Boris-The-Razor/usb-composite-library)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue.svg?style=for-the-badge)](https://github.com/Call-me-Boris-The-Razor/usb-composite-library)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/STM32-H7-orange.svg?style=for-the-badge&logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32h7-series.html)
 [![TinyUSB](https://img.shields.io/badge/TinyUSB-0.16+-yellow.svg?style=for-the-badge)](https://github.com/hathach/tinyusb)
@@ -55,7 +55,7 @@ build_flags =
 ```
 
 ```cpp
-// main.cpp — CDC + MSC + SD карта
+// main.cpp — CDC + MSC + SD карта (минимальный код!)
 #include "usb_composite.h"
 #include "usb_sdmmc.h"
 
@@ -63,11 +63,13 @@ usb::UsbDevice g_usb;
 usb::SdmmcBlockDevice g_sd;
 
 int main() {
-    HAL_Init();
-    SystemClock_Config();
+    HAL_Init();  // ← Только это! Библиотека сама настроит PLL и clocks!
     
-    // SD карта — одна строка!
-    g_sd.Init(usb::presets::OkoRelay());
+    // SD карта
+    usb::SdmmcConfig sd_cfg;
+    sd_cfg.instance = SDMMC1;
+    sd_cfg.use_4bit_mode = true;
+    g_sd.Init(sd_cfg);
     
     // USB
     g_usb.Init();
@@ -76,16 +78,11 @@ int main() {
     
     while (1) {
         g_usb.Process();
-        
-        if (g_usb.CdcTerminalOpened()) {
-            g_usb.CdcPrintf("SD: %lu MB\r\n", 
-                g_sd.GetCardInfo().capacity_bytes / (1024*1024));
-        }
     }
 }
 ```
 
-**Всё.** Никаких дополнительных файлов не нужно. 🎉
+**Всё.** Без `SystemClock_Config()`. Библиотека делает всё сама! 🎉
 
 ---
 

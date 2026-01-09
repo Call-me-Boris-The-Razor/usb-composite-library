@@ -1,6 +1,14 @@
 # API Reference
 
+**Версия 2.4.0**
+
 Полная документация по API USB Composite Library.
+
+## Что нового в 2.4.0
+
+- **Auto PLL Config** — библиотека автоматически настроит PLL если он не настроен
+- **Не требуется SystemClock_Config** — даже для MSC
+- **HSE Auto-Detection** — определяет HSE_VALUE (25/8 MHz) или fallback на HSI
 
 ## Содержание
 
