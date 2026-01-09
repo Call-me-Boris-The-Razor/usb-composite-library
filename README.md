@@ -6,7 +6,7 @@
 
 ### Plug-and-Play USB для STM32H7
 
-[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg?style=for-the-badge)](https://github.com/Call-me-Boris-The-Razor/usb-composite-library)
+[![Version](https://img.shields.io/badge/version-3.1.1-blue.svg?style=for-the-badge)](https://github.com/Call-me-Boris-The-Razor/usb-composite-library)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/STM32-H7-orange.svg?style=for-the-badge&logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32h7-series.html)
 [![TinyUSB](https://img.shields.io/badge/TinyUSB-0.16+-yellow.svg?style=for-the-badge)](https://github.com/hathach/tinyusb)
