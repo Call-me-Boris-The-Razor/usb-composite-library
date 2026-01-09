@@ -61,21 +61,76 @@ bool SdmmcBlockDevice::Init(const SdmmcConfig& config) {
     s_cache_dirty = false;
     phys_block_size_ = 1024;  // По умолчанию для SD NAND
     
-    // 1. Настраиваем источник тактирования SDMMC от PLL2R
-    // PLL2 настраиваем сами - гарантированно работает
+    // 1. Если PLL не готов - настраиваем его автоматически
+    if (!__HAL_RCC_GET_FLAG(RCC_FLAG_PLLRDY)) {
+        // Автоматическая настройка PLL от HSE (25 MHz) или HSI (64 MHz)
+        RCC_OscInitTypeDef RCC_OscInit = {0};
+        RCC_ClkInitTypeDef RCC_ClkInit = {0};
+        
+        // Настройка питания
+        HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
+        __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+        while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
+        
+        // Пробуем HSE, если не работает - используем HSI
+        RCC_OscInit.OscillatorType = RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_HSI48;
+        RCC_OscInit.HSEState = RCC_HSE_ON;
+        RCC_OscInit.HSI48State = RCC_HSI48_ON;
+        RCC_OscInit.PLL.PLLState = RCC_PLL_ON;
+        RCC_OscInit.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+        
+        // Попытка определить частоту HSE (25 MHz или 8 MHz)
+        #if defined(HSE_VALUE) && (HSE_VALUE == 25000000)
+        // HSE = 25 MHz -> PLL = 480 MHz
+        RCC_OscInit.PLL.PLLM = 5;    // 25/5 = 5 MHz
+        RCC_OscInit.PLL.PLLN = 192;  // 5*192 = 960 MHz VCO
+        #elif defined(HSE_VALUE) && (HSE_VALUE == 8000000)
+        // HSE = 8 MHz -> PLL = 480 MHz
+        RCC_OscInit.PLL.PLLM = 1;    // 8/1 = 8 MHz
+        RCC_OscInit.PLL.PLLN = 120;  // 8*120 = 960 MHz VCO
+        #else
+        // Default: HSI = 64 MHz
+        RCC_OscInit.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+        RCC_OscInit.PLL.PLLM = 8;    // 64/8 = 8 MHz
+        RCC_OscInit.PLL.PLLN = 120;  // 8*120 = 960 MHz VCO
+        #endif
+        
+        RCC_OscInit.PLL.PLLP = 2;    // 960/2 = 480 MHz (SYSCLK)
+        RCC_OscInit.PLL.PLLQ = 4;    // 960/4 = 240 MHz (SDMMC)
+        RCC_OscInit.PLL.PLLR = 2;
+        RCC_OscInit.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
+        RCC_OscInit.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
+        RCC_OscInit.PLL.PLLFRACN = 0;
+        
+        if (HAL_RCC_OscConfig(&RCC_OscInit) != HAL_OK) {
+            // HSE не работает - fallback на HSI
+            RCC_OscInit.HSEState = RCC_HSE_OFF;
+            RCC_OscInit.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+            RCC_OscInit.PLL.PLLM = 8;
+            RCC_OscInit.PLL.PLLN = 120;
+            HAL_RCC_OscConfig(&RCC_OscInit);
+        }
+        
+        // Настройка шин
+        RCC_ClkInit.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
+                                RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
+                                RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
+        RCC_ClkInit.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+        RCC_ClkInit.SYSCLKDivider = RCC_SYSCLK_DIV1;
+        RCC_ClkInit.AHBCLKDivider = RCC_HCLK_DIV2;
+        RCC_ClkInit.APB3CLKDivider = RCC_APB3_DIV2;
+        RCC_ClkInit.APB1CLKDivider = RCC_APB1_DIV2;
+        RCC_ClkInit.APB2CLKDivider = RCC_APB2_DIV2;
+        RCC_ClkInit.APB4CLKDivider = RCC_APB4_DIV2;
+        HAL_RCC_ClockConfig(&RCC_ClkInit, FLASH_LATENCY_4);
+        
+        HAL_PWREx_EnableUSBVoltageDetector();
+    }
+    
+    // 2. Настраиваем SDMMC от PLL1Q
     RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
     PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_SDMMC;
-    
-    // Настраиваем PLL2 для SDMMC (200 MHz -> делитель в SDMMC)
-    PeriphClkInit.PLL2.PLL2M = 4;    // HSI = 64 MHz / 4 = 16 MHz
-    PeriphClkInit.PLL2.PLL2N = 50;   // 16 * 50 = 800 MHz VCO
-    PeriphClkInit.PLL2.PLL2P = 2;
-    PeriphClkInit.PLL2.PLL2Q = 2;
-    PeriphClkInit.PLL2.PLL2R = 4;    // 800 / 4 = 200 MHz
-    PeriphClkInit.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_3;
-    PeriphClkInit.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
-    PeriphClkInit.PLL2.PLL2FRACN = 0;
-    PeriphClkInit.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL2;
+    PeriphClkInit.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL;
     HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
     
     // 2. Включаем тактирование SDMMC

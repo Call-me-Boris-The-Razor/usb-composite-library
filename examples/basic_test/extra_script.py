@@ -35,9 +35,9 @@ def before_upload(source, target, env):
         ser.dtr = False
         ser.close()
         
-        # Ждём пока плата перейдёт в DFU
+        # Ждём пока плата перейдёт в DFU (увеличенная задержка)
         print("Waiting for DFU bootloader...")
-        time.sleep(2)
+        time.sleep(4)
         
     except Exception as e:
         print(f"Could not trigger DFU: {e}")

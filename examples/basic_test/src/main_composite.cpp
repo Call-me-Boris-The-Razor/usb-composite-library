@@ -2,8 +2,8 @@
  * @file main_composite.cpp
  * @brief USB Composite Library - CDC + MSC Test
  * 
- * Полный composite: COM порт + USB флешка
- * Кастомные названия устройства задаются через build_flags
+ * Минимальный composite: COM порт + USB флешка
+ * Библиотека сама настроит PLL если нужно!
  */
 
 #include "stm32h7xx_hal.h"
@@ -16,14 +16,14 @@ usb::SdmmcBlockDevice g_sd;
 int main(void) {
     HAL_Init();
     
-    // SD карта
+    // SD карта — библиотека сама настроит PLL!
     usb::SdmmcConfig sd_cfg;
     sd_cfg.instance = SDMMC1;
     sd_cfg.use_4bit_mode = true;
     
     g_sd.Init(sd_cfg);
     
-    // USB Composite
+    // USB
     g_usb.Init();
     
     if (g_sd.IsReady()) {
@@ -42,7 +42,7 @@ int main(void) {
             last = HAL_GetTick();
             
             if (g_usb.CdcIsConnected()) {
-                g_usb.CdcPrintf("OkoRelay Composite v2.3.0 #%lu\r\n", ++counter);
+                g_usb.CdcPrintf("OkoRelay Composite #%lu\r\n", ++counter);
                 g_usb.CdcPrintf("  SD: %s, %lu MB\r\n", 
                     g_sd.IsReady() ? "OK" : "FAIL",
                     g_sd.IsReady() ? (g_sd.GetBlockCount() * g_sd.GetBlockSize() / 1024 / 1024) : 0);
