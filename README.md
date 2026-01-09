@@ -94,7 +94,7 @@ int main() {
 | Компонент | Версия | Примечание |
 |-----------|--------|------------|
 | **PlatformIO** | любая | framework: `stm32cube` |
-| **TinyUSB** | 0.15+ | требует ручной установки |
+| **TinyUSB** | 0.15.0 | автоматически из GitHub |
 | **MCU** | STM32H7 | тестировалось на H743, H750 |
 
 ---
@@ -110,7 +110,7 @@ int main() {
 ```ini
 lib_deps = 
     lib/usb_composite
-    lib/tinyusb        ; скачать с github.com/hathach/tinyusb
+    ; TinyUSB установится автоматически из GitHub
 ```
 
 </details>
