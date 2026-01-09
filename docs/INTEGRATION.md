@@ -9,6 +9,7 @@
 - [Конфигурация PlatformIO](#конфигурация-platformio)
 - [Настройка Linker Script](#настройка-linker-script)
 - [Инициализация системы](#инициализация-системы)
+- [Интеграция SDMMC](#интеграция-sdmmc)
 - [Интеграция с существующим кодом](#интеграция-с-существующим-кодом)
 
 ---
@@ -216,6 +217,102 @@ void SystemClock_Config(void) {
     PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
     HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
 }
+```
+
+---
+
+## Интеграция SDMMC
+
+Библиотека включает встроенный драйвер SD карт. Не нужно писать свою реализацию `IBlockDevice`.
+
+### Быстрый старт с SDMMC
+
+```cpp
+#include "usb_composite.h"
+#include "usb_sdmmc.h"
+
+usb::UsbDevice g_usb;
+usb::SdmmcBlockDevice g_sd;
+
+int main() {
+    HAL_Init();
+    SystemClock_Config();
+    
+    // Инициализация SD — одна строка!
+    g_sd.Init(usb::presets::OkoRelay());
+    
+    // USB
+    g_usb.Init();
+    g_usb.MscAttach(&g_sd);
+    g_usb.Start();
+    
+    while (1) {
+        g_usb.Process();
+    }
+}
+```
+
+### Флаги компиляции
+
+```ini
+build_flags = 
+    -D USB_MSC_ENABLED
+    -D USB_SDMMC_ENABLED
+    -D STM32H743xx
+```
+
+### Пресеты плат
+
+| Пресет | Платы |
+|--------|-------|
+| `OkoRelay()` | OkoRelay, стандартная распиновка SDMMC1 |
+| `DevEBoxH743()` | DevEBox STM32H743 |
+| `WeActH743()` | WeAct Studio H743 |
+
+### Распиновка SDMMC1
+
+| Сигнал | Пин | AF |
+|--------|-----|-----|
+| CLK | PC12 | AF12 |
+| CMD | PD2 | AF12 |
+| D0 | PC8 | AF12 |
+| D1 | PC9 | AF12 |
+| D2 | PC10 | AF12 |
+| D3 | PC11 | AF12 |
+
+### Кастомная конфигурация
+
+```cpp
+usb::SdmmcConfig cfg;
+
+// Изменить пины (если отличаются от стандартных)
+cfg.clk_port = GPIOC;
+cfg.clk_pin = GPIO_PIN_12;
+// ... остальные пины
+
+// Скорость
+cfg.use_4bit_mode = true;
+cfg.init_clock_div = 598;    // 400kHz для инициализации
+cfg.normal_clock_div = 4;    // Быстрее (48MHz @ 240MHz kernel)
+
+// Таймауты
+cfg.rw_timeout_ms = 3000;
+
+g_sd.Init(cfg);
+```
+
+### Диагностика
+
+```cpp
+// Проверка состояния
+if (g_sd.GetState() == usb::SdmmcState::Error) {
+    auto diag = g_sd.GetDiagnostics();
+    printf("HAL Error: 0x%08lX\n", diag.hal_error);
+}
+
+// Информация о карте
+auto info = g_sd.GetCardInfo();
+printf("Capacity: %llu MB\n", info.capacity_bytes / (1024*1024));
 ```
 
 ---

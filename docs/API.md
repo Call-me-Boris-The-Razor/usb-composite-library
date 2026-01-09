@@ -6,6 +6,7 @@
 
 - [Namespace usb](#namespace-usb)
 - [Класс UsbDevice](#класс-usbdevice)
+- [Класс SdmmcBlockDevice](#класс-sdmmcblockdevice)
 - [Интерфейс IBlockDevice](#интерфейс-iblockdevice)
 - [Структуры конфигурации](#структуры-конфигурации)
 - [Callback типы](#callback-типы)
@@ -296,6 +297,198 @@ void MscEject();
 ```
 
 Эмулирует извлечение диска.
+
+---
+
+## Класс SdmmcBlockDevice
+
+> ⚠️ Требует `#define USB_MSC_ENABLED` и `#define USB_SDMMC_ENABLED`
+
+Встроенный драйвер SD карт через SDMMC1. Реализует интерфейс `IBlockDevice`.
+
+```cpp
+#include "usb_sdmmc.h"
+
+usb::SdmmcBlockDevice g_sd;
+g_sd.Init(usb::presets::OkoRelay());
+```
+
+### Методы инициализации
+
+#### Init
+
+```cpp
+bool Init(const SdmmcConfig& config = SdmmcConfig{});
+```
+
+Инициализирует SDMMC периферию и SD карту.
+
+**Параметры:**
+- `config` — конфигурация SDMMC (пины, скорости, режим)
+
+**Возвращает:** `true` при успешной инициализации
+
+**Пример:**
+```cpp
+// Использование пресета
+g_sd.Init(usb::presets::OkoRelay());
+
+// Или кастомная конфигурация
+usb::SdmmcConfig cfg;
+cfg.use_4bit_mode = true;
+cfg.normal_clock_div = 4;  // Быстрее
+g_sd.Init(cfg);
+```
+
+#### DeInit
+
+```cpp
+void DeInit();
+```
+
+Деинициализирует SDMMC.
+
+### Методы статуса
+
+#### IsCardInserted
+
+```cpp
+bool IsCardInserted() const;
+```
+
+**Возвращает:** `true` если карта вставлена и готова
+
+#### GetCardInfo
+
+```cpp
+SdmmcCardInfo GetCardInfo() const;
+```
+
+**Возвращает:** информацию о карте (размер, тип, версия)
+
+```cpp
+auto info = g_sd.GetCardInfo();
+printf("Capacity: %llu MB\n", info.capacity_bytes / (1024*1024));
+printf("Block count: %lu\n", info.block_count);
+```
+
+#### GetState
+
+```cpp
+SdmmcState GetState() const;
+```
+
+**Возвращает:** текущее состояние (`NotInitialized`, `Ready`, `Busy`, `Error`)
+
+#### GetDiagnostics
+
+```cpp
+SdmmcDiagnostics GetDiagnostics() const;
+```
+
+**Возвращает:** диагностическую информацию (HAL state, error codes)
+
+#### Sync
+
+```cpp
+bool Sync();
+```
+
+Синхронизирует кэш с картой.
+
+**Возвращает:** `true` при успехе
+
+#### GetHandle
+
+```cpp
+SD_HandleTypeDef* GetHandle();
+```
+
+**Возвращает:** HAL handle для продвинутого использования
+
+### IBlockDevice методы
+
+```cpp
+bool IsReady() const override;
+uint32_t GetBlockCount() const override;
+uint32_t GetBlockSize() const override;  // Всегда 512
+bool Read(uint32_t lba, uint8_t* buffer, uint32_t count) override;
+bool Write(uint32_t lba, const uint8_t* buffer, uint32_t count) override;
+```
+
+### Структуры
+
+#### SdmmcConfig
+
+```cpp
+struct SdmmcConfig {
+    // GPIO CLK (по умолчанию PC12)
+    GPIO_TypeDef* clk_port = GPIOC;
+    uint16_t clk_pin = GPIO_PIN_12;
+    
+    // GPIO CMD (по умолчанию PD2)
+    GPIO_TypeDef* cmd_port = GPIOD;
+    uint16_t cmd_pin = GPIO_PIN_2;
+    
+    // GPIO D0-D3 (по умолчанию PC8-PC11)
+    GPIO_TypeDef* data_port = GPIOC;
+    uint16_t d0_pin = GPIO_PIN_8;
+    uint16_t d1_pin = GPIO_PIN_9;
+    uint16_t d2_pin = GPIO_PIN_10;
+    uint16_t d3_pin = GPIO_PIN_11;
+    
+    // Alternate Function
+    uint8_t alternate_function = GPIO_AF12_SDMMC1;
+    
+    // SDMMC Instance
+    SDMMC_TypeDef* instance = SDMMC1;
+    
+    // Режим шины
+    bool use_4bit_mode = true;
+    
+    // Clock dividers
+    uint32_t init_clock_div = 598;    // 400kHz для инициализации
+    uint32_t normal_clock_div = 8;    // 24MHz для работы
+    
+    // Таймауты (мс)
+    uint32_t init_timeout_ms = 2000;
+    uint32_t rw_timeout_ms = 2000;
+};
+```
+
+#### SdmmcCardInfo
+
+```cpp
+struct SdmmcCardInfo {
+    uint32_t block_count;       // Количество блоков
+    uint32_t block_size;        // Размер блока (512)
+    uint64_t capacity_bytes;    // Полная ёмкость
+    uint32_t card_type;         // Тип карты
+    uint32_t card_version;      // Версия
+    bool is_ready;              // Готовность
+};
+```
+
+#### SdmmcState
+
+```cpp
+enum class SdmmcState : uint8_t {
+    NotInitialized,   // Не инициализирован
+    Ready,            // Готов
+    Busy,             // Занят
+    Error,            // Ошибка
+};
+```
+
+### Пресеты плат
+
+```cpp
+namespace usb::presets {
+    SdmmcConfig OkoRelay();      // OkoRelay (стандартная распиновка)
+    SdmmcConfig DevEBoxH743();   // DevEBox H743
+    SdmmcConfig WeActH743();     // WeAct Studio H743
+}
+```
 
 ---
 
