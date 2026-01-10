@@ -32,7 +32,8 @@
             "include/*",
             "libs/*",
             "linker/*",
-            "src/*"
+            "src/*",
+            "docs/*"
         ]
     }
 }
