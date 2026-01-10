@@ -168,15 +168,24 @@ UsbDiagnostics UsbDevice::GetDiagnostics() const {
 }
 
 void UsbDevice::ToggleDpPin() {
-    if (config_.dp_toggle_pin.port == nullptr || config_.dp_toggle_ms == 0) {
+    if (config_.dp_toggle_pin.port == 0xFF || config_.dp_toggle_ms == 0) {
         return;
     }
     
-    auto* port = static_cast<GPIO_TypeDef*>(config_.dp_toggle_pin.port);
-    uint16_t pin = static_cast<uint16_t>(1U << config_.dp_toggle_pin.pin);
+    // Таблица соответствия индекс → GPIO_TypeDef*
+    static GPIO_TypeDef* const kPorts[] = {
+        GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF, GPIOG, GPIOH
+    };
+    
+    if (config_.dp_toggle_pin.port >= sizeof(kPorts)/sizeof(kPorts[0])) {
+        return;  // Некорректный порт
+    }
+    
+    GPIO_TypeDef* port = kPorts[config_.dp_toggle_pin.port];
+    uint16_t pin_mask = static_cast<uint16_t>(1U << config_.dp_toggle_pin.pin);
     
     // Притягиваем D+ к земле
-    HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(port, pin_mask, GPIO_PIN_RESET);
     HAL_Delay(config_.dp_toggle_ms);
     
     // Возвращаем в нормальное состояние (AF для USB)

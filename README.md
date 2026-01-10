@@ -335,7 +335,7 @@ int main() {
     
     // Конфигурация USB
     usb::Config cfg;
-    cfg.dp_toggle_pin = {GPIOA, 12};  // PA12 = D+ (опционально)
+    cfg.dp_toggle_pin = {usb::PORT_A, 12};  // PA12 = D+ (опционально)
     cfg.dp_toggle_ms = 10;            // 10 мс toggle
     
     // Инициализация и запуск
@@ -588,8 +588,8 @@ Slot-функции инициализации (weak, можно переопр�
 
 ```cpp
 usb::Config cfg;
-cfg.dp_toggle_pin = {GPIOA, 12};  // PA12
-cfg.dp_toggle_ms = 10;            // 10 мс
+cfg.dp_toggle_pin = {usb::PORT_A, 12};  // PA12
+cfg.dp_toggle_ms = 10;                   // 10 мс
 g_usb.Init(cfg);
 g_usb.Start();  // Здесь выполнится toggle
 ```

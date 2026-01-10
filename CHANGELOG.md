@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-01-10
+
+### Breaking Changes
+- **GpioPin format** — унифицирован формат GPIO пинов для совместимости с PORT_CONTROL
+  - `void* port` → `uint8_t port` (индекс: 0=A, 1=B, ..., 7=H)
+  - `uint16_t pin` → `uint8_t pin` (номер: 0-15)
+  - Миграция: `{GPIOA, 12}` → `{usb::PORT_A, 12}`
+
+### Added
+- **PORT_A..PORT_H** — константы портов в namespace `usb::`
+- **USB_PIN_NONE** — макрос для отключенного пина `{0xFF, 0xFF}`
+- **USB_PIN(p, n)** — макрос для создания `GpioPin`
+
+### Changed
+- **ToggleDpPin()** — использует таблицу `kPorts[]` для маппинга индекс → GPIO_TypeDef*
+- **Config::dp_toggle_pin** — значение по умолчанию `{0xFF, 0xFF}` вместо `{nullptr, 0}`
+
+---
+
 ## [3.1.1] - 2026-01-10
 
 ### Fixed

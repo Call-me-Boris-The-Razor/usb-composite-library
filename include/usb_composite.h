@@ -22,7 +22,7 @@
  * int main() {
  *     // Конфигурация
  *     usb::Config cfg;
- *     cfg.dp_toggle_pin = {GPIOA, 12};  // PA12 = D+
+ *     cfg.dp_toggle_pin = {usb::PORT_A, 12};  // PA12 = D+
  *     cfg.dp_toggle_ms = 10;
  *     
  *     g_usb.Init(cfg);
@@ -72,9 +72,19 @@ enum class State : uint8_t {
 
 /// Конфигурация пина GPIO
 struct GpioPin {
-    void* port;          ///< GPIO порт (например, GPIOA)
-    uint16_t pin;        ///< Номер пина (0-15)
+    uint8_t port;    ///< Индекс порта: 0=A, 1=B, 2=C, 3=D, 4=E, 5=F, 6=G, 7=H
+    uint8_t pin;     ///< Номер пина: 0-15
 };
+
+/// Константы портов для удобства
+constexpr uint8_t PORT_A = 0;
+constexpr uint8_t PORT_B = 1;
+constexpr uint8_t PORT_C = 2;
+constexpr uint8_t PORT_D = 3;
+constexpr uint8_t PORT_E = 4;
+constexpr uint8_t PORT_F = 5;
+constexpr uint8_t PORT_G = 6;
+constexpr uint8_t PORT_H = 7;
 
 #ifdef USB_MSC_ENABLED
 /// Алиас для совместимости: используем единый IBlockDevice из ports
@@ -92,8 +102,8 @@ struct UsbDiagnostics {
 /// Конфигурация USB устройства
 struct Config {
     /// Пин D+ для ручного переподключения (опционально)
-    /// Если port == nullptr, toggle не выполняется
-    GpioPin dp_toggle_pin = {nullptr, 0};
+    /// Если port == 0xFF, toggle не выполняется
+    GpioPin dp_toggle_pin = {0xFF, 0xFF};
     
     /// Длительность toggle D+ в мс (0 = не делать toggle)
     uint32_t dp_toggle_ms = 10;
@@ -283,3 +293,7 @@ private:
 };
 
 }  // namespace usb
+
+/// Вспомогательные макросы для работы с GPIO пинами
+#define USB_PIN_NONE      ((usb::GpioPin){0xFF, 0xFF})
+#define USB_PIN(p, n)     ((usb::GpioPin){(p), (n)})
